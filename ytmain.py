@@ -23,7 +23,7 @@ def apiAccess():
     api_service_name = "youtube"
     api_version = "v3"
     # client_secrets_file = "YOUR_CLIENT_SECRET_FILE.json"
-    DEVELOPER_KEY = ""
+    DEVELOPER_KEY = "AIzaSyBPk7iGKFuaoRX3v3udKYcYWZDwMNczXLU"
 
     # Get credentials and create an API client
 
@@ -64,8 +64,9 @@ def singleVid(videoId, *args, **kwargs):
     cleanedchannel = secure_filename(channel)
     cleanedtitle = secure_filename(title)
     cleanedFilename = ("videos/" + cleanedchannel + "/" + cleanedtitle + "/Comments - " + cleanedtitle + ".txt")
+    #ignore download errors and don't overwrite videos
     ydl_opts = {"outtmpl":f"videos/{cleanedchannel}/{cleanedtitle}/{cleanedtitle}.%(ext)s",
-                "ignoreerrors":True}
+                "ignoreerrors":True, "nooverwrites":True}
 
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         ydl.download(["https://www.youtube.com/watch?v="+videoId])
