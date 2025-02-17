@@ -24,7 +24,7 @@ def apiAccess():
     api_service_name = "youtube"
     api_version = "v3"
 
-    DEVELOPER_KEY = "AIzaSyD4DvMBfNOwZMgFSO8hEr9Q2IVgRXmVlNA"
+    DEVELOPER_KEY = ""
 
     youtube = googleapiclient.discovery.build(
         api_service_name,
