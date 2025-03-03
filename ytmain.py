@@ -18,7 +18,7 @@ def apiAccess():
     api_service_name = "youtube"
     api_version = "v3"
     # client_secrets_file = "YOUR_CLIENT_SECRET_FILE.json"
-    DEVELOPER_KEY = "AIzaSyAYkE0PAmPho4jApT6SCiMwMtrIImitCQk"
+    DEVELOPER_KEY = ""
 
     # Get credentials and create an API client
 
