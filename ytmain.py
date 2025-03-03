@@ -18,7 +18,7 @@ def apiAccess():
     api_service_name = "youtube"
     api_version = "v3"
     # client_secrets_file = "YOUR_CLIENT_SECRET_FILE.json"
-    DEVELOPER_KEY = ""
+    DEVELOPER_KEY = "AIzaSyAYkE0PAmPho4jApT6SCiMwMtrIImitCQk"
 
     # Get credentials and create an API client
 
@@ -61,6 +61,7 @@ def singleVid(videoId, *args, **kwargs):
     else:
         with open(cleanedFilename, "w") as f:
             f.write(json.dumps(response))
+
 #gets uploads playlist ids
 def multiChannels(channelNames):
     youtube = apiAccess()
@@ -85,37 +86,53 @@ def stripUsers(filename):
                 names.append(line[start:end])
         return names
 
-#return ids from uploads playlist
-def getVideosFromPlaylist(channelIds):
+#return ids from uploads playlist w/ filter
+def getVideosFromPlaylist(channelIds, startdate,enddate):
     youtube = apiAccess()
     ret = []
     i=1
     for channelId in channelIds:
         print(channelId + " - " +str(i)+ "/"+ str(len(channelIds)) )
+        ret.append(channelId)
         i+=1
         nextPageToken = ""
-        i2 = 0
         while nextPageToken is not None:
             if nextPageToken == "":
                 nextPageToken = None
             request = youtube.playlistItems().list(
                 part="contentDetails",
-                #maxresults dictates how many videos from the playlist
                 maxResults=50,
                 pageToken=nextPageToken,
                 playlistId=channelIds[channelId]
             )
             try:
                 response = request.execute()
+                #change here to change timeframe
+                if not filterVideosByDate(response["items"][0]["contentDetails"]["videoPublishedAt"][:10],startdate=startdate,enddate=None):
+                    break
                 for item in response['items']:
-                    ret.append(item['contentDetails']['videoId'])
+                    if filterVideosByDate(item["contentDetails"]["videoPublishedAt"][:10],startdate=startdate,enddate=enddate):
+                        ret.append(item['contentDetails']['videoId'])
             except TimeoutError as e:
                 print(e)
             finally:
                 nextPageToken = response.get('nextPageToken')
     return ret
 
-def filterVideos(videoId, *args, **kwargs):
+def filterVideosByDate(datePublished,startdate,enddate):
+
+    datePublished = date.fromisoformat(datePublished)
+    if startdate is not None and startdate != "":
+        startdate = date.fromisoformat(startdate)
+        if datePublished < startdate:
+            return False
+    if enddate is not None and enddate != "":
+        enddate = date.fromisoformat(enddate)
+        if datePublished > enddate:
+            return False
+    return True
+
+def filterVideosByID(videoId, *args, **kwargs):
     youtube = apiAccess()
     startdate = kwargs.get("startdate", None)
     enddate = kwargs.get("enddate", None)
@@ -134,8 +151,6 @@ def filterVideos(videoId, *args, **kwargs):
         enddate = date.fromisoformat(enddate)
         if datePublished > enddate:
             return False
-   # with open("joy-info.txt", "a") as f:
-        #f.write(json.dumps(info["items"][0]["snippet"]))
     return True
 
 def countVideos(filename):
@@ -164,7 +179,7 @@ if __name__ == "__main__":
     videoIds = getVideosFromPlaylist(channelIds)
     for video in videoIds:
         #start/end time should be in the format year-mm-dd, undeclared, or empty string ""
-        if filterVideos(video, startdate="2024-01-01", enddate=""):
+        if filterVideosByID(video, startdate="2024-01-01", enddate=""):
         #singlevid filter should be in the format of a list ex ["replies","snippet"]
         #singlevid downloads video + comments, returns nothing if not between start and end
             singleVid(video, filter=["replies","snippet"])
