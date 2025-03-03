@@ -33,7 +33,6 @@ def apiAccess():
     )
     return youtube
 
-
 def singleVid(
     videoId, 
     *args, 
@@ -44,7 +43,6 @@ def singleVid(
     **kwargs
 ):
     youtube = apiAccess()
-
     startdate = kwargs.get("startdate", None)
     enddate = kwargs.get("enddate", None)
     comment_filter = kwargs.get("filter", ["replies", "snippet"])
@@ -76,7 +74,7 @@ def singleVid(
         end_dt = date.fromisoformat(enddate)
         if publish_date > end_dt:
             return
-    
+
     duration_iso = content_details["duration"]
     duration_td = parse_duration(duration_iso)
     duration_in_minutes = duration_td.total_seconds() / 60.0
@@ -97,7 +95,7 @@ def singleVid(
     cleaned_title = secure_filename(title)
     video_dir = f"videos/{cleaned_channel}/{cleaned_title}"
     os.makedirs(video_dir, exist_ok=True)
-    
+
     metadata_filename = os.path.join(video_dir, f"Metadata - {cleaned_title}.txt")
     with open(metadata_filename, "w", encoding="utf-8") as meta_file:
         meta_file.write(str(info))
@@ -130,21 +128,18 @@ def singleVid(
 
     if download_transcript:
         transcript_filename = os.path.join(video_dir, f"Transcript - {cleaned_title}.txt")
-        from youtube_transcript_api import (YouTubeTranscriptApi, TranscriptsDisabled,
-                                            NoTranscriptFound, CouldNotRetrieveTranscript)
         try:
             transcript_list = YouTubeTranscriptApi.get_transcript(
                 videoId, languages=['en', 'en-US']
             )
-        except (TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript) as e:
-            print(f"No transcript found for video: {videoId} ({str(e)})")
+        except (TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript):
+            print(f"No transcript found for video: {videoId}")
             return
-        except Exception as e:
+        except Exception:
             return
         else:
             with open(transcript_filename, "w", encoding="utf-8") as tfile:
                 tfile.write(str(transcript_list))
-
 
 def stripUsers(filename):
     with open(filename, "r", encoding="utf-8") as f:
@@ -161,7 +156,6 @@ def stripUsers(filename):
                 names.append(line[start:end].strip())
         return names
 
-
 def plotChannelCounts(channel_counts, top_n=20):
     sorted_items = sorted(channel_counts.items(), key=lambda x: x[1], reverse=True)
     if not sorted_items:
@@ -169,33 +163,29 @@ def plotChannelCounts(channel_counts, top_n=20):
         return
     top_channels = sorted_items[:top_n]
     remainder = sorted_items[top_n:]
-    
     if remainder:
         others_count = sum(x[1] for x in remainder)
         top_channels.append(("Others", others_count))
-    
     channels, counts = zip(*top_channels)
-    
     plt.figure(figsize=(12, 6))
-    bars = plt.bar(channels, counts, color='steelblue')
-    
+    bars = plt.bar(channels, counts)
     for bar in bars:
         height = bar.get_height()
         plt.annotate(
             str(height),
-            xy=(bar.get_x() + bar.get_width() / 2, height),  
+            xy=(bar.get_x() + bar.get_width() / 2, height),
             xytext=(0, 3),
             textcoords="offset points",
-            ha='center', 
+            ha='center',
             va='bottom'
         )
-    
     plt.title(f"Number of Retrieved Videos per Channel (Top {top_n})")
     plt.xlabel("Channel")
     plt.ylabel("Video Count")
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
     plt.show()
+    return sorted_items
 
 def multiChannels(channelNames):
     youtube = apiAccess()
@@ -208,7 +198,6 @@ def multiChannels(channelNames):
             uploads_playlist = response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
             ret[channel_id] = uploads_playlist
     return ret
-
 
 def getVideosFromPlaylist(channelIds, vidNumber):
     youtube = apiAccess()
@@ -224,18 +213,15 @@ def getVideosFromPlaylist(channelIds, vidNumber):
             ret.append(item['contentDetails']['videoId'])
     return ret
 
-
 def searchQuery(query, maxResults=500, startdate="", enddate="", max_duration=None,
                 comment_filter=["replies", "snippet"], download_video=True,
                 download_comments=True, download_transcript=True,
                 channel_counts=None):
     youtube = apiAccess()
-    
     all_video_ids = set()
     next_page_token = None
     previous_page_token = None
     results_per_page = 50
-    
     while len(all_video_ids) < maxResults:
         req = youtube.search().list(
             part="id,snippet",
@@ -245,7 +231,6 @@ def searchQuery(query, maxResults=500, startdate="", enddate="", max_duration=No
             pageToken=next_page_token
         )
         response = req.execute()
-        
         items = response.get("items", [])
         before_count = len(all_video_ids)
         for item in items:
@@ -253,18 +238,14 @@ def searchQuery(query, maxResults=500, startdate="", enddate="", max_duration=No
             all_video_ids.add(video_id)
         after_count = len(all_video_ids)
         new_ids_count = after_count - before_count
-        
         if new_ids_count == 0:
             print("No new video IDs found on this page. Breaking.")
             break
-
         previous_page_token = next_page_token
         next_page_token = response.get("nextPageToken")
         print("Next page token:", next_page_token)
-        
         if not next_page_token or next_page_token == previous_page_token:
             break
-    
     for vid in all_video_ids:
         singleVid(
             vid,
@@ -278,17 +259,15 @@ def searchQuery(query, maxResults=500, startdate="", enddate="", max_duration=No
             channel_counts=channel_counts
         )
 
-
 if __name__ == "__main__":
     channel_counts = {}
-
     desired_max_results = 500
-
+    generate_csv = True
     searchQuery(
         query="Ghana election",
         maxResults=desired_max_results,
-        startdate="",
-        enddate="",
+        startdate="2024-01-01",
+        enddate="2025-03-03",
         max_duration=None,
         comment_filter=["replies", "snippet"],
         download_video=False,
@@ -300,5 +279,11 @@ if __name__ == "__main__":
         top_n = 30
     else:
         top_n = 20
-
-    plotChannelCounts(channel_counts, top_n=top_n)
+    sorted_items = plotChannelCounts(channel_counts, top_n=top_n)
+    if generate_csv:
+        import csv
+        with open("channel_counts.csv", "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Channel", "Video Count"])
+            for channel, count in sorted_items:
+                writer.writerow([channel, count])
