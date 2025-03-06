@@ -186,7 +186,7 @@ def countVideos(filename):
 
 if __name__ == "__main__":
     #strips users from a txt list of channels
-    channelUsers = stripUsers("joy.txt")
+    channelUsers = stripUsers("channels.txt")
     #get channel ids from users
     channelIds = getChannelsFromUsers(channelUsers)
     #get a list of video IDs from a channel's upload playlist, filtered by date (inclusive)
