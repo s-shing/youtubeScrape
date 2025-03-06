@@ -5,6 +5,8 @@ import json
 import os
 import re
 from datetime import date
+import sys
+
 
 import yt_dlp as youtube_dl
 import googleapiclient.discovery
@@ -26,16 +28,17 @@ def apiAccess():
         api_service_name, api_version, developerKey=DEVELOPER_KEY)
     return youtube
 
-def singleVid(videoId, *args, **kwargs):
+def singleVidDownload(videoId, *args, **kwargs):
     # Disable OAuthlib's HTTPS verification when running locally.
     # *DO NOT* leave this option enabled in production.
     youtube = apiAccess()
     filter = kwargs.get("filter", ["replies", "snippet"])
+    toggleDownload = kwargs.get("toggleDownload", True)
+    toggleComments = kwargs.get("toggleComments", True)
+    toggleCaptions = kwargs.get("toggleCaptions", True)
+    toggleThumbnails = kwargs.get("toggleThumbnails", True)
+
     part = ','.join(filter)
-    request = youtube.commentThreads().list(
-        part=part,
-        videoId=videoId
-    )
     findtitle = youtube.videos().list(
         part="snippet",
         id=videoId
@@ -43,27 +46,39 @@ def singleVid(videoId, *args, **kwargs):
     info = findtitle.execute()
     if info['items']:
         channel = info["items"][0]["snippet"]["channelTitle"]
-        title = info["items"][0]["snippet"]["title"]
+    else:
+        return
     cleanedchannel = secure_filename(channel)
-    cleanedtitle = secure_filename(title)
-    cleanedFilename = ("videos/" + cleanedchannel + "/" + cleanedtitle + "/Comments - " + cleanedtitle + ".txt")
+    cleanedFilename = ("videos/" + cleanedchannel + "/" + str(videoId) + "/Comments - " + str(videoId) + ".txt")
     #ignore download errors and don't overwrite videos
-    ydl_opts = {"outtmpl":f"videos/{cleanedchannel}/{cleanedtitle}/{cleanedtitle}.%(ext)s",
+    ydl_opts = {"outtmpl":f"videos/{cleanedchannel}/{str(videoId)}/{str(videoId)}.%(ext)s",
                 "ignoreerrors":True, "nooverwrites":True}
-
+    if not toggleDownload:
+        ydl_opts["skip_download"] = True
+    if toggleCaptions:
+        ydl_opts["writesubtitles"] = True
+        ydl_opts["writeautomaticsub"] = True
+    if toggleThumbnails:
+        ydl_opts["writethumbnails"] = True
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         ydl.download(["https://www.youtube.com/watch?v="+videoId])
-    try:
-        response = request.execute()
-    except googleapiclient.errors.HttpError as err:
-        with open(cleanedFilename, "w") as f:
-            f.write(err.reason)
-    else:
-        with open(cleanedFilename, "w") as f:
-            f.write(json.dumps(response))
+    if toggleComments:
+        commentRequest = youtube.commentThreads().list(
+            part=part,
+            videoId=videoId
+        )
+        try:
+            response = commentRequest.execute()
+        except googleapiclient.errors.HttpError as err:
+            with open(cleanedFilename, "w") as f:
+                f.write(err.reason)
+        else:
+            with open(cleanedFilename, "w") as f:
+                f.write(json.dumps(response))
+
 
 #gets uploads playlist ids
-def multiChannels(channelNames):
+def getChannelsFromUsers(channelNames):
     youtube = apiAccess()
     ret = {}
     for channelName in channelNames:
@@ -124,11 +139,11 @@ def filterVideosByDate(datePublished,startdate,enddate):
     datePublished = date.fromisoformat(datePublished)
     if startdate is not None and startdate != "":
         startdate = date.fromisoformat(startdate)
-        if datePublished < startdate:
+        if datePublished <= startdate:
             return False
     if enddate is not None and enddate != "":
         enddate = date.fromisoformat(enddate)
-        if datePublished > enddate:
+        if datePublished >= enddate:
             return False
     return True
 
@@ -169,17 +184,16 @@ def countVideos(filename):
         print("videocount:", videoCount)
 
 
-#pull videos and comments from channel
 if __name__ == "__main__":
-    #strips channel usernames from links in file
-    channelList = stripUsers("joy.txt")
-    #grabs channel ids from usernames
-    channelIds = multiChannels(channelList)
-    #gets all uploaded video id's from channel ID, vidNumber = number of uploads to grab
-    videoIds = getVideosFromPlaylist(channelIds)
-    for video in videoIds:
-        #start/end time should be in the format year-mm-dd, undeclared, or empty string ""
-        if filterVideosByID(video, startdate="2024-01-01", enddate=""):
-        #singlevid filter should be in the format of a list ex ["replies","snippet"]
-        #singlevid downloads video + comments, returns nothing if not between start and end
-            singleVid(video, filter=["replies","snippet"])
+    #strips users from a txt list of channels
+    channelUsers = stripUsers("joy.txt")
+    #get channel ids from users
+    channelIds = getChannelsFromUsers(channelUsers)
+    #get a list of video IDs from a channel's upload playlist, filtered by date (inclusive)
+    videoIds = getVideosFromPlaylist(channelIds,startdate="2024-01-01",enddate="2025-01-01")
+    with open("filteredVideos.txt", "a") as f:
+        for videoId in videoIds:
+            f.write(videoId + "\n")
+            #download video and comment with toggle
+            singleVidDownload(videoId,toggleDownload=True, toggleComments=True, toggleCaptions=True,toggleThumbnails=True)
+
