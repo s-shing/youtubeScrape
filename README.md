@@ -8,8 +8,12 @@ Filenames are based on video ID while foldernames are based on channels.
 
 ## Parameters
 In the code, you can 
-toggle download, comments, thumbnail, and captions seperately
+
+toggle download, comments, thumbnail, and captions separately
+
 change filter date
+
 change file to pull from
+
 change file to write to
 
