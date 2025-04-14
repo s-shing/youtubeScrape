@@ -37,7 +37,7 @@ def singleVid(videoId, *args, **kwargs):
         return
     ret ={}
     youtube = apiAccess()
-    filter = kwargs.get("filter", ["snippet,tags"])
+    filter = kwargs.get("filter", ["snippet"])
     part = ','.join(filter)
 
     findtitle = youtube.videos().list(
