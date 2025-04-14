@@ -1,5 +1,5 @@
 from __future__ import unicode_literals
-import csv
+
 import os
 import re
 from datetime import date
@@ -24,7 +24,7 @@ def apiAccess():
     api_service_name = "youtube"
     api_version = "v3"
 
-    DEVELOPER_KEY = "AIzaSyDH-P8HdjloKKJZmm6TYneTFuK80jb85Ao"
+    DEVELOPER_KEY = os.environ["YT_API_KEY"]
 
     youtube = googleapiclient.discovery.build(
         api_service_name,
@@ -39,8 +39,7 @@ def singleVid(
     download_video, 
     download_comments, 
     download_transcript, 
-    channel_counts=None,
-    store_directory, 
+    channel_counts=None, 
     **kwargs
 ):
     youtube = apiAccess()
@@ -92,53 +91,55 @@ def singleVid(
     if channel_counts is not None:
         channel_counts[channel] = channel_counts.get(channel, 0) + 1
 
-    if store_directory:
-        cleaned_channel = secure_filename(channel)
-        video_dir = f"videos/{cleaned_channel}/{videoId}"
-        os.makedirs(video_dir, exist_ok=True)
+    cleaned_channel = secure_filename(channel)
+    cleaned_title = secure_filename(title)
+    video_dir = f"videos/{cleaned_channel}/{cleaned_title}"
+    os.makedirs(video_dir, exist_ok=True)
 
-        metadata_filename = os.path.join(video_dir, f"Metadata - {videoId}.txt")
-        with open(metadata_filename, "w", encoding="utf-8") as meta_file:
-            meta_file.write(str(info))
+    metadata_filename = os.path.join(video_dir, f"Metadata - {cleaned_title}.txt")
+    with open(metadata_filename, "w", encoding="utf-8") as meta_file:
+        meta_file.write(str(info))
 
-        if download_video:
-            ydl_opts = {
-                "outtmpl": f"{video_dir}/{videoId}.%(ext)s",
-                "ignoreerrors": True,
-                "nooverwrites": True,
-            }
-            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([f"https://www.youtube.com/watch?v={videoId}"])
+    if download_video:
+        ydl_opts = {
+            "outtmpl": f"{video_dir}/{cleaned_title}.%(ext)s",
+            "ignoreerrors": True,
+            "nooverwrites": True,
+            "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]"
+        }
+        print(f"Downloading video + audio => {title} (videoId={videoId})")
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([f"https://www.youtube.com/watch?v={videoId}"])
 
-        if download_comments:
-            comments_filename = os.path.join(video_dir, f"Comments - {videoId}.txt")
-            request_comments = youtube.commentThreads().list(
-                part=part,
-                videoId=videoId
+    if download_comments:
+        comments_filename = os.path.join(video_dir, f"Comments - {cleaned_title}.txt")
+        request_comments = youtube.commentThreads().list(
+            part=part,
+            videoId=videoId
+        )
+        try:
+            comments_response = request_comments.execute()
+        except googleapiclient.errors.HttpError as err:
+            with open(comments_filename, "w", encoding="utf-8") as cfile:
+                cfile.write(f"Error retrieving comments: {str(err)}")
+        else:
+            with open(comments_filename, "w", encoding="utf-8") as cfile:
+                cfile.write(str(comments_response))
+
+    if download_transcript:
+        transcript_filename = os.path.join(video_dir, f"Transcript - {cleaned_title}.txt")
+        try:
+            transcript_list = YouTubeTranscriptApi.get_transcript(
+                videoId, languages=['en', 'en-US']
             )
-            try:
-                comments_response = request_comments.execute()
-            except googleapiclient.errors.HttpError as err:
-                with open(comments_filename, "w", encoding="utf-8") as cfile:
-                    cfile.write(f"Error retrieving comments: {str(err)}")
-            else:
-                with open(comments_filename, "w", encoding="utf-8") as cfile:
-                    cfile.write(str(comments_response))
-
-        if download_transcript:
-            transcript_filename = os.path.join(video_dir, f"Transcript - {videoId}.txt")
-            try:
-                transcript_list = YouTubeTranscriptApi.get_transcript(
-                    videoId, languages=['en', 'en-US']
-                )
-            except (TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript):
-                print(f"No transcript found for video: {videoId}")
-                return
-            except Exception:
-                return
-            else:
-                with open(transcript_filename, "w", encoding="utf-8") as tfile:
-                    tfile.write(str(transcript_list))
+        except (TranscriptsDisabled, NoTranscriptFound, CouldNotRetrieveTranscript):
+            print(f"No transcript found for video: {videoId}")
+            return
+        except Exception:
+            return
+        else:
+            with open(transcript_filename, "w", encoding="utf-8") as tfile:
+                tfile.write(str(transcript_list))
 
 def stripUsers(filename):
     with open(filename, "r", encoding="utf-8") as f:
@@ -155,8 +156,7 @@ def stripUsers(filename):
                 names.append(line[start:end].strip())
         return names
 
-def plotChannelCounts(channel_counts, top_n):
-    
+def plotChannelCounts(channel_counts, top_n=20):
     sorted_items = sorted(channel_counts.items(), key=lambda x: x[1], reverse=True)
     if not sorted_items:
         print("No data to plot.")
@@ -166,9 +166,7 @@ def plotChannelCounts(channel_counts, top_n):
     if remainder:
         others_count = sum(x[1] for x in remainder)
         top_channels.append(("Others", others_count))
-        
     channels, counts = zip(*top_channels)
-    
     plt.figure(figsize=(12, 6))
     bars = plt.bar(channels, counts)
     for bar in bars:
@@ -181,14 +179,12 @@ def plotChannelCounts(channel_counts, top_n):
             ha='center',
             va='bottom'
         )
-        
     plt.title(f"Number of Retrieved Videos per Channel (Top {top_n})")
     plt.xlabel("Channel")
     plt.ylabel("Video Count")
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
     plt.show()
-    
     return sorted_items
 
 def multiChannels(channelNames):
@@ -217,17 +213,10 @@ def getVideosFromPlaylist(channelIds, vidNumber):
             ret.append(item['contentDetails']['videoId'])
     return ret
 
-def searchQuery(query,
-                maxResults=500,
-                startdate="",
-                enddate="",
-                max_duration=None,
-                comment_filter=["replies", "snippet"],
-                download_video=True,
-                download_comments=True,
-                download_transcript=True,
-                channel_counts=None,
-                store_directory=False):
+def searchQuery(query, maxResults=500, startdate="", enddate="", max_duration=None,
+                comment_filter=["replies", "snippet"], download_video=True,
+                download_comments=True, download_transcript=True,
+                channel_counts=None):
     youtube = apiAccess()
     all_video_ids = set()
     next_page_token = None
@@ -267,55 +256,34 @@ def searchQuery(query,
             download_video=download_video,
             download_comments=download_comments,
             download_transcript=download_transcript,
-            channel_counts=channel_counts,
-            store_directory=store_directory
+            channel_counts=channel_counts
         )
-    return all_video_ids
 
 if __name__ == "__main__":
-    SearchQuery = "Ghana Election"
-    MaxResults = 70
-    StartDate = '2024-01-01'
-    EndDate = '2025-03-09'
-    RequireVideoDownload = False
-    RequireComments = False
-    RequireTrancripts = False
-    MaximumLength = None
-    CommentType = ["replies","snippet"]
-    RetrieveVideoIDs = False
-    RetrieveChannels = False
-    RetrieveTopChannels = 20
-    Create_directory = False
-    
     channel_counts = {}
-    all_video = searchQuery(
-        query=SearchQuery,
-        maxResults=MaxResults,
-        startdate=StartDate,
-        enddate=EndDate,
-        max_duration=MaximumLength,
-        comment_filter=CommentType,
-        download_video=RequireVideoDownload,
-        download_comments=RequireComments,
-        download_transcript=RequireTrancripts,
-        channel_counts=channel_counts,
-        store_directory=Create_directory
+    desired_max_results = 500
+    generate_csv = True
+    searchQuery(
+        query="Ghana election",
+        maxResults=desired_max_results,
+        startdate="2024-01-01",
+        enddate="2025-03-03",
+        max_duration=None,
+        comment_filter=["replies", "snippet"],
+        download_video=False,
+        download_comments=False,
+        download_transcript=False,
+        channel_counts=channel_counts 
     )
-
-    # sorted_items = plotChannelCounts(channel_counts, top_n=RetrieveTopChannels)
-    
-    if RetrieveChannels:
-        with open("channel_counts.csv", "w", newline="", encoding="utf-8") as file1:
-            writer = csv.writer(file1)
+    if desired_max_results >= 100:
+        top_n = 30
+    else:
+        top_n = 20
+    sorted_items = plotChannelCounts(channel_counts, top_n=top_n)
+    if generate_csv:
+        import csv
+        with open("channel_counts.csv", "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
             writer.writerow(["Channel", "Video Count"])
             for channel, count in sorted_items:
                 writer.writerow([channel, count])
-                
-    if RetrieveVideoIDs:
-        with open("Retrived Video Ids", "w", newline="", encoding="utf-8") as file2:
-            writer = csv.writer(file2)
-            writer.writerow(["VideoID"])
-            for vid in all_video:
-                writer.writerow([vid])
-
-        
