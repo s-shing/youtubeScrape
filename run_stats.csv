@@ -1,0 +1,6 @@
+query,total,with_tag,no_tag,pct_with_tag,pct_no_tag,one_to_five,gt5
+Ghana Elections 2024,509,324,185,63.7,36.3,65,259
+Germany Elections 2025,506,408,98,80.6,19.4,81,327
+US Elections 2024,526,445,81,84.6,15.4,47,398
+US Elections 2024,526,450,76,85.6,14.4,45,405
+Ghana Elections 2024,511,321,190,62.8,37.2,64,257
