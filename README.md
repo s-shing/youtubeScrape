@@ -1,9 +1,12 @@
 # YOUTUBE DOWNLOAD SCRAPER
 ## Quickstart
-Place channel links in channels.txt and run ytmain.py to get channel and video ids between 2024-2025, then download videos, comments, caption, and thumbnail. 
+create a .env file with YT_API_KEY="{api key}" or replace DEVELOPER_KEY = os.environ["YT_API_KEY"] with DEVELOPER_KEY = {api key}  where {api key} is your youtube v3 api key
+ensure path to .env is set as .env
 
-Channel and video IDs will be in /filteredVideos.txt, with channel IDs being 24 characters and video ID's being 11, each ID seperated by a newline "\n". 
-Every section of video ID's is headed by the corresponding channel.
+you may need to install ffmpeg if video and audio is not merging during download. see here: https://www.wikihow.com/Install-FFmpeg-on-Windows
+
+read through ytmain to see available presets. alternatively, directly call util functions
+
 Filenames are based on video ID while foldernames are based on channels.
 
 ## Parameters
