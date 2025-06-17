@@ -66,7 +66,10 @@ class Util:
                 print(e)
             finally:
                 i += 50
-                nextPageToken = response.get('nextPageToken')
+                if response is None:
+                    nextPageToken = response.get('nextPageToken')
+                else:
+                    nextPageToken = None
         return ret
 
     def singleVidDownload(self, videoId,*args, **kwargs):
