@@ -17,7 +17,7 @@ def getVids(file, **kwargs):
     util = Util()
     startdate = kwargs.get("startdate", None)
     enddate = kwargs.get("enddate", None)
-    channelUsers = util.stripUsers("channels.txt")
+    channelUsers = util.stripUsers(file)
     channelIds = util.getChannelsFromUsers(channelUsers)
     videoIds = util.getVideosFromPlaylist(channelIds,startdate,enddate)
     return videoIds
