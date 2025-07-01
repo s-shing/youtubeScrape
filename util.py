@@ -73,8 +73,6 @@ class Util:
         return ret
 
     def singleVidDownload(self, videoId,*args, **kwargs):
-        # Disable OAuthlib's HTTPS verification when running locally.
-        # *DO NOT* leave this option enabled in production.
         youtube = self.request
         filter = kwargs.get("filter", ["replies", "snippet"])
         toggleDownload = kwargs.get("toggleDownload", False)
@@ -104,7 +102,7 @@ class Util:
         if toggleThumbnails:
             ydl_opts["writethumbnail"] = True
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download(["https://www.youtube.com/watch?v=" + videoId])
+            ydl.download(["https://www.youtube.com/watch?v=" + videoId[0]])
         if toggleComments:
             commentRequest = youtube.commentThreads().list(
                 part=part,

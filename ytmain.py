@@ -1,3 +1,5 @@
+from os import write
+
 from util import Util
 import csv
 
@@ -50,19 +52,19 @@ def search(query, **kwargs):
 # all the downloaded videos will be in the 'videos'
 # folder download, comments, caption, and
 # thumbnail fetch can be toggled
-
+# file input should be csv
 def downloadVids(file, **kwargs):
     util = Util()
 
-    with open(file, "a") as f:
+    with open(file, "r") as f:
         videoIds = csv.reader(f, delimiter="\n")
 
-    toggleDownload = kwargs.get("toggleDownload", False)
-    toggleComments = kwargs.get("toggleComments", False)
-    toggleCaptions = kwargs.get("toggleCaptions", False)
-    toggleThumbnails = kwargs.get("toggleThumbnails", False)
-    for videoId in videoIds:
-        util.singleVidDownload(videoId, toggleDownload, toggleComments, toggleCaptions, toggleThumbnails)
+        toggleDownload = kwargs.get("toggleDownload", False)
+        toggleComments = kwargs.get("toggleComments", False)
+        toggleCaptions = kwargs.get("toggleCaptions", False)
+        toggleThumbnails = kwargs.get("toggleThumbnails", False)
+        for videoId in videoIds:
+            util.singleVidDownload(videoId, toggleDownload=toggleDownload, toggleComments=toggleComments, toggleCaptions=toggleCaptions, toggleThumbnails=toggleThumbnails)
 
 
 
@@ -78,4 +80,6 @@ def downloadVid(videoId, **kwargs):
 
 
 if __name__ == "__main__":
-
+    # vidIDs= getVids("channels.csv",startdate="2024-01-01", enddate="2025-01-01")
+    # writeToFile(vidIDs,"channels.csv")
+    downloadVids("channels.csv", toggleThumbnails=True,toggleDownload=True,toggleCaptions=True,toggleComments=True)
