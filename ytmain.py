@@ -63,9 +63,12 @@ def downloadVids(file, **kwargs):
         toggleComments = kwargs.get("toggleComments", False)
         toggleCaptions = kwargs.get("toggleCaptions", False)
         toggleThumbnails = kwargs.get("toggleThumbnails", False)
-        for videoId in videoIds:
-            util.singleVidDownload(videoId, toggleDownload=toggleDownload, toggleComments=toggleComments, toggleCaptions=toggleCaptions, toggleThumbnails=toggleThumbnails)
+        toggleStatistics = kwargs.get("toggleStatistics", False)
 
+        for videoId in videoIds:
+            util.singleVidDownload(videoId, toggleDownload=toggleDownload, toggleComments=toggleComments,
+                                   toggleCaptions=toggleCaptions, toggleThumbnails=toggleThumbnails,
+                                   toggleStatistics=toggleStatistics)
 
 
 # download one video by ID, which can be obtained
@@ -76,10 +79,12 @@ def downloadVid(videoId, **kwargs):
     toggleComments = kwargs.get("toggleComments", False)
     toggleCaptions = kwargs.get("toggleCaptions", False)
     toggleThumbnails = kwargs.get("toggleThumbnails", False)
-    util.singleVidDownload(videoId, toggleDownload=toggleDownload, toggleComments=toggleComments, toggleCaptions=toggleCaptions, toggleThumbnails=toggleThumbnails)
+    toggleStatistics = kwargs.get("toggleStatistics", False)
+
+    util.singleVidDownload(videoId, toggleDownload=toggleDownload, toggleComments=toggleComments, toggleCaptions=toggleCaptions, toggleThumbnails=toggleThumbnails,toggleStatistics=toggleStatistics)
 
 
 if __name__ == "__main__":
-    # vidIDs= getVids("channels.csv",startdate="2024-01-01", enddate="2025-01-01")
-    # writeToFile(vidIDs,"channels.csv")
-    downloadVids("channels.csv", toggleThumbnails=True,toggleDownload=True,toggleCaptions=True,toggleComments=True)
+    # vidIDs= getVids("channels.txt",startdate="2024-01-01", enddate="2025-01-01")
+    # writeToFile(vidIDs[:10],"channels.csv")
+    downloadVids("channels.csv", toggleThumbnails=True,toggleDownload=True,toggleCaptions=True,toggleComments=True,toggleStatistics=True)

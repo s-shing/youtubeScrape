@@ -74,14 +74,14 @@ class Util:
 
     def singleVidDownload(self, videoId,*args, **kwargs):
         youtube = self.request
-        filter = kwargs.get("filter", ["replies", "snippet"])
+        videoId  = videoId[0]
         toggleDownload = kwargs.get("toggleDownload", False)
         toggleComments = kwargs.get("toggleComments", False)
         toggleCaptions = kwargs.get("toggleCaptions", False)
         toggleThumbnails = kwargs.get("toggleThumbnails", False)
-        part = ','.join(filter)
+        toggleStatistics = kwargs.get("toggleStatistics", False)
         findtitle = youtube.videos().list(
-            part="snippet",
+            part=["snippet","statistics"],
             id=videoId
         )
         info = findtitle.execute()
@@ -95,17 +95,18 @@ class Util:
         ydl_opts = {"outtmpl": f"videos/{cleanedchannel}/{str(videoId)}/{str(videoId)}.%(ext)s",
                     "ignoreerrors": True, "nooverwrites": True,}
         if not toggleDownload:
-            ydl_opts["skip_download"] = False
+            ydl_opts["skip_download"] = True
+
         if toggleCaptions:
             #having caption issue with ytdl api, may have to rewrite for inline
             pass
         if toggleThumbnails:
             ydl_opts["writethumbnail"] = True
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download(["https://www.youtube.com/watch?v=" + videoId[0]])
+            ydl.download(["https://www.youtube.com/watch?v=" + videoId])
         if toggleComments:
             commentRequest = youtube.commentThreads().list(
-                part=part,
+                part=["snippet","replies"],
                 videoId=videoId
             )
             try:
@@ -116,6 +117,11 @@ class Util:
             else:
                 with open(cleanedFilename, "w") as f:
                     f.write(json.dumps(response))
+        if toggleStatistics:
+            cleanedFilenameStats = (
+                        "videos/" + cleanedchannel + "/" + str(videoId) + "/Statistics - " + str(videoId) + ".txt")
+            with open(cleanedFilenameStats, 'w') as f:
+                f.write(json.dumps(info['items'][0]['statistics']))
 
     # gets uploads playlist ids
     def getChannelsFromUsers(self, channelNames):

@@ -1,0 +1,6 @@
+.env
+videos/
+keywords/
+apikey
+*.txt
+*.csv
